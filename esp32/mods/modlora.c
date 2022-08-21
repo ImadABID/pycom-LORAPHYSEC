@@ -3419,28 +3419,41 @@ uint8_t vec_dot_product(const uint8_t *vec1, const uint8_t *vec2, uint8_t size){
     return res;
 }
 
-static void vec_key2vec(const PHYSEC_Key *k, uint8_t *vec_out){
-    for (int i=0; i<PHYSEC_KEY_SIZE; i++)
-    {
-        vec_out[i] = (k->key[i/8] >> (7-(i%8))) & 0x1;
-    }
-}
-
-static void vec_vec2key(uint8_t *vec, PHYSEC_Key *k_out){
+static void vec_key2vec(const PHYSEC_Key *k, unsigned char *vec_out){
     
     int byte_index = -1;
     int in_byte_index;
+    
+    for (int i=0; i<PHYSEC_KEY_SIZE; i++){
 
-    memset(k_out->key, 0, PHYSEC_KEY_SIZE_BYTES*sizeof(uint8_t));
-
-    for(int i = 0; i < PHYSEC_KEY_SIZE; i++){
         if(i%8 == 0){
             byte_index++;
             in_byte_index = 0;
         }
-        k_out->key[byte_index] +=  vec[i] << (7-in_byte_index);
+        
+        vec_out[i] = (k->key[byte_index] >> (7-in_byte_index)) & 0x1;
+        in_byte_index++;
     }
+}
+
+static void vec_vec2key(unsigned char *vec, PHYSEC_Key *k_out){
     
+    int byte_index = -1;
+    int in_byte_index;
+
+    memset(k_out->key, 0, PHYSEC_KEY_SIZE_BYTES*sizeof(unsigned char));
+
+    for(int i = 0; i < PHYSEC_KEY_SIZE; i++){
+        
+        if(i%8 == 0){
+            byte_index++;
+            in_byte_index = 0;
+        }
+
+        k_out->key[byte_index] +=  ((vec[i] << (7-in_byte_index)) & (0x1) << (7-in_byte_index));
+        in_byte_index++;
+    }
+
 }
 
 // defining compression matrix
@@ -3458,7 +3471,6 @@ matrix compression_matrix_def(){
         A.content[i] = malloc(sizeof(uint8_t) * A.ncols);
 
         for(int j = 0; j < PHYSEC_KEY_SIZE; j++){
-            printf("%d : %d\n", i, A_1D_content[i*PHYSEC_KEY_SIZE+j]);
             A.content[i][j] = A_1D_content[i*PHYSEC_KEY_SIZE+j];
         }
     }

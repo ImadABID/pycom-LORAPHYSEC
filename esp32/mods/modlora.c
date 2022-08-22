@@ -3704,17 +3704,32 @@ static struct atom_array atom_array_init(const matrix *A){
     return atoms;
 }
 
+static int atom_get_in_tab_index_by_atom_index(struct atom_array *atoms, int index){
+    for(int i = 0; i < atoms->not_used_atoms_nbr; i++){
+        if(atoms->atoms[i].index == index){
+            return i;
+        }
+    }
+    fprintf(stderr, "Atom index not found.\n");
+    return -1;
+}
+
 static void atom_array_mark_as_used(struct atom_array *atoms, int index){
+
+    int in_tab_index = atom_get_in_tab_index_by_atom_index(atoms, index);
+
     memcpy(
-        atoms->atoms+index,
+        atoms->atoms+in_tab_index,
         atoms->atoms+(atoms->not_used_atoms_nbr -1),
         sizeof(struct atom)
     );
+
     atoms->not_used_atoms_nbr--;
 }
 
 static int atom_array_get_best_matching_atom_index(struct atom_array *atoms, int *residual){
 
+    char max_not_define = 1;
     int max_index = -1;
     int max = -1;
 
@@ -3723,9 +3738,10 @@ static int atom_array_get_best_matching_atom_index(struct atom_array *atoms, int
     for(int i = 0; i < atoms->not_used_atoms_nbr; i++){
         
         dot_product = vec_dot_product(atoms->atoms[i].atom, residual, PHYSEC_CS_COMPRESSED_SIZE);
-        if(dot_product > max){
+        if(max_not_define || dot_product > max){
+            max_not_define = 0;
             max = dot_product;
-            max_index = i;
+            max_index = atoms->atoms[i].index;
         }
     
     }

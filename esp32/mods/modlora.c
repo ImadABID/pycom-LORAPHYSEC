@@ -3001,13 +3001,13 @@ int8_t PHYSEC_quntification_compute_level_nbr(struct density *d){
         0 : in case of error
 */
 static
-unsigned char PHYSEC_quntification_get_level(
+uint8_t PHYSEC_quntification_get_level(
     int8_t rssi,
     int8_t *threshold_starts,
     int8_t *threshold_ends,
     int8_t qunatification_level_nbr
 ){
-    unsigned char level = 1;
+    uint8_t level = 1;
     for(int i = 0; i<qunatification_level_nbr; i++){
         if(rssi<threshold_starts[i])
             return 0;
@@ -3055,7 +3055,7 @@ int PHYSEC_quntification(
         cur_start = mp_hal_ticks_ms();
     // preaparing for key generation
     memset(key_output, 0, 16*sizeof(uint8_t));
-    unsigned char level;
+    uint8_t level;
     int8_t rest_bits;
     uint8_t gen_bits;
 
@@ -3805,10 +3805,11 @@ PHYSEC_craft_reconciliate_vector(int *cs_vec, const PHYSEC_Key *k, matrix *A)
     mul_matrix_H(A, k_vec, PHYSEC_KEY_SIZE, cs_vec);
 }
 
-static void PHYSEC_compute_key_error(const matrix *A, const int *y, unsigned char *x_out){
-    
+static void PHYSEC_compute_key_error(const matrix *A, const int *y, uint8_t *x_out){
+
     // Init key error
-    memset(x_out, 0, PHYSEC_KEY_SIZE*sizeof(unsigned char));
+    uint8_t x_tmp[PHYSEC_KEY_SIZE];
+    memset(x_tmp, 0, PHYSEC_KEY_SIZE*sizeof(uint8_t));
 
     // Init atom array
     struct atom_array atoms = atom_array_init(A);
@@ -3818,41 +3819,35 @@ static void PHYSEC_compute_key_error(const matrix *A, const int *y, unsigned cha
     int residual[PHYSEC_CS_COMPRESSED_SIZE];
     memcpy(residual, y, PHYSEC_CS_COMPRESSED_SIZE * sizeof(int));
 
-    // Null vector residual
-    double last_residual_norm2 = vec_norm2(residual, PHYSEC_CS_COMPRESSED_SIZE);
+    double residual_norm2;
+    double min_residual_norm2 = vec_norm2(residual, PHYSEC_CS_COMPRESSED_SIZE);
+    memcpy(x_out, x_tmp, sizeof(uint8_t)*PHYSEC_KEY_SIZE);
 
-    // norm 1 residual
-    best_matching_atom_index = atom_array_get_best_matching_atom_index(&atoms, residual);
-    vec_diff(
-        residual,
-        atoms.atoms[best_matching_atom_index].atom,
-        residual,
-        PHYSEC_CS_COMPRESSED_SIZE * sizeof(unsigned char)
-    );
-    double residual_norm2 = vec_norm2(residual, PHYSEC_CS_COMPRESSED_SIZE);
     
-    while(
-        atoms.not_used_atoms_nbr > 0 &&
-        residual_norm2 <= last_residual_norm2
-    ){
+    while(atoms.not_used_atoms_nbr > 0){
 
-        x_out[best_matching_atom_index] = 1;
-        atom_array_mark_as_used(&atoms, best_matching_atom_index);
-
-        // next minimiziation try
         best_matching_atom_index = atom_array_get_best_matching_atom_index(&atoms, residual);
+
+        x_tmp[best_matching_atom_index] = 1;
+        atom_array_mark_as_used(&atoms, best_matching_atom_index);
 
         vec_diff(
             residual,
             atoms.atoms[best_matching_atom_index].atom,
             residual,
-            PHYSEC_CS_COMPRESSED_SIZE * sizeof(unsigned char)
+            PHYSEC_CS_COMPRESSED_SIZE * sizeof(uint8_t)
         );
-
-        last_residual_norm2 = residual_norm2;
+        
         residual_norm2 = vec_norm2(residual, PHYSEC_CS_COMPRESSED_SIZE);
 
+        if(residual_norm2 < min_residual_norm2){
+            min_residual_norm2 = residual_norm2;
+            memcpy(x_out, x_tmp, sizeof(uint8_t)*PHYSEC_KEY_SIZE);
+        }
+
     }
+
+    // printf("min residual = %lf\n", min_residual_norm2);
 
 }
 

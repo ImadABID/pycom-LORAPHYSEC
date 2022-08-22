@@ -3419,7 +3419,7 @@ uint8_t vec_dot_product(const uint8_t *vec1, const uint8_t *vec2, uint8_t size){
     return res;
 }
 
-static void vec_key2vec(const PHYSEC_Key *k, unsigned char *vec_out){
+static void vec_key2vec(const PHYSEC_Key *k, uint8_t *vec_out){
     
     int byte_index = -1;
     int in_byte_index;
@@ -3436,7 +3436,7 @@ static void vec_key2vec(const PHYSEC_Key *k, unsigned char *vec_out){
     }
 }
 
-static void vec_vec2key(unsigned char *vec, PHYSEC_Key *k_out){
+static void vec_vec2key(uint8_t *vec, PHYSEC_Key *k_out){
     
     int byte_index = -1;
     int in_byte_index;
@@ -3516,6 +3516,8 @@ struct atom_array{
 static struct atom_array atom_array_init(const matrix *A){
     
     struct atom_array atoms;
+
+    atoms.not_used_atoms_nbr = PHYSEC_KEY_SIZE;
 
     for(int i = 0; i<PHYSEC_KEY_SIZE; i++){
         atoms.atoms[i].index = i;
